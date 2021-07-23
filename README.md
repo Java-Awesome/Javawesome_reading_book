@@ -18,7 +18,6 @@
 질문은 아래와 같을 수 있다. 
 
 ```
-
 처음 보는 용어에 대한 설명 요구
 
 글로만 적혀있는 기술에 대한 사용법 요구
@@ -33,7 +32,6 @@
 ## ➡️ 블로그 활용
 스터디가 끝나고나면, 토론한 내용을 바탕으로 크게 3가지 작업이 이루어진다.
 ```
-
 issue를 정리해서 close 한다.
 
 팀블로그에 토론 내용을 반영하여 그 주 챕터에 대한 글을 작성한다.
@@ -43,4 +41,10 @@ issue를 정리해서 close 한다.
 블로그 작업 또한 그 주에 북 리더가 해야한다. 
 ```
 
+
+
+## 1. [객체지향의 사실과 오해 (조영호, 위키북스)](https://wikibook.co.kr/object-orientation/)
+
+1. [1장](https://github.com/Java-Awesome/Javawesome_reading_book/tree/main/%EA%B0%9D%EC%B2%B4%EC%A7%80%ED%96%A5%EC%9D%98_%EC%82%AC%EC%8B%A4%EA%B3%BC_%EC%98%A4%ED%95%B4/1%EC%9E%A5) - 2021.07.25
+2. [2장](https://github.com/Java-Awesome/Javawesome_reading_book/tree/main/%EA%B0%9D%EC%B2%B4%EC%A7%80%ED%96%A5%EC%9D%98_%EC%82%AC%EC%8B%A4%EA%B3%BC_%EC%98%A4%ED%95%B4/1%EC%9E%A5) - 2021.07.25
 

@@ -46,7 +46,6 @@ issue를 정리해서 close 한다.
 ## 1. [객체지향의 사실과 오해 (조영호, 위키북스)](https://wikibook.co.kr/object-orientation/)
 
 1. [1장](https://github.com/Java-Awesome/Javawesome_reading_book/tree/main/%EA%B0%9D%EC%B2%B4%EC%A7%80%ED%96%A5%EC%9D%98_%EC%82%AC%EC%8B%A4%EA%B3%BC_%EC%98%A4%ED%95%B4/1%EC%9E%A5) - 2021.07.25
-> 조영호, 『객체지향의 사실과 오해』, 위키북스(2015), p20-38.
+  > 조영호, 『객체지향의 사실과 오해』, 위키북스(2015), p20-38.
 2. [2장](https://github.com/Java-Awesome/Javawesome_reading_book/tree/main/%EA%B0%9D%EC%B2%B4%EC%A7%80%ED%96%A5%EC%9D%98_%EC%82%AC%EC%8B%A4%EA%B3%BC_%EC%98%A4%ED%95%B4/2%EC%9E%A5) - 2021.07.25
-> 조영호, 『객체지향의 사실과 오해』, 위키북스(2015), p38-71.
-
+  > 조영호, 『객체지향의 사실과 오해』, 위키북스(2015), p38-71.

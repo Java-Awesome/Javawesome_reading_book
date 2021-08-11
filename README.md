@@ -60,3 +60,12 @@ issue를 정리해서 close 한다.
 4. [4장](https://github.com/Java-Awesome/Javawesome_reading_book/tree/main/%EA%B0%9D%EC%B2%B4%EC%A7%80%ED%96%A5%EC%9D%98_%EC%82%AC%EC%8B%A4%EA%B3%BC_%EC%98%A4%ED%95%B4/4%EC%9E%A5) - 2021.08.01
 
    >  조영호, 『객체지향의 사실과 오해』, 위키북스(2015), p106-137.
+   
+5. [5장](https://github.com/Java-Awesome/Javawesome_reading_book/tree/main/%EA%B0%9D%EC%B2%B4%EC%A7%80%ED%96%A5%EC%9D%98_%EC%82%AC%EC%8B%A4%EA%B3%BC_%EC%98%A4%ED%95%B4/5%EC%9E%A5) - 2021.08.13
+
+   >  조영호, 『객체지향의 사실과 오해』, 위키북스(2015), p138-176.
+
+6. [6장](https://github.com/Java-Awesome/Javawesome_reading_book/tree/main/%EA%B0%9D%EC%B2%B4%EC%A7%80%ED%96%A5%EC%9D%98_%EC%82%AC%EC%8B%A4%EA%B3%BC_%EC%98%A4%ED%95%B4/6%EC%9E%A5) - 2021.08.13
+
+   >  조영호, 『객체지향의 사실과 오해』, 위키북스(2015), p177-206.
+

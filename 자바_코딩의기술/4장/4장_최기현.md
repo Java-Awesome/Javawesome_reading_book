@@ -1,0 +1,315 @@
+# chapter 04 올바르게 명명하기
+
+## 자바 명명 규칙 사용하기
+
+```java
+class Rover {
+    static final double WalkingSpeed = 3;
+
+    final String SerialNumber;
+    double MilesPerHour;
+
+    Rover(String NewSerialNumber) {
+        SerialNumber = NewSerialNumber;
+    }
+
+    void Drive() {
+        MilesPerHour = WalkingSpeed;
+    }
+    void Stop() {
+        MilesPerHour = 0;
+    }
+}
+```
+
+자바에서는 패키지, 클래스, 인터페이스, 열거형, 메소드, 변수, 필드, 매개변수, 상수 등 수많은 요소를 명명해야 한다.
+
+하지만 위 코드는 전혀 Java 명명 규칙을 고려하지 않고 있다.
+
+```java
+class Rover {
+    static final double WALKING_SPEED = 3;
+
+    final String serialNumber;
+    double milesPerHour;
+
+    Rover(String serialNumber) {
+        this.serialNumber = serialNumber;
+    }
+
+    void drive() {
+        milesPerHour = WALKING_SPEED;
+    }
+
+    void stop() {
+        milesPerHour = 0;
+    }
+}
+```
+
+## 4.2 프레임워크엔느 Getter/Setter 규칙 적용
+
+```java
+class Astronaut {
+
+    String name;
+    boolean retired;
+
+    Astronaut(String name) {
+        this.name = name;
+    }
+
+    String getFullName() {
+        return name;
+    }
+
+    void setFullName(String name) {
+        this.name = name;
+    }
+
+    boolean getRetired() {
+        return retired;
+    }
+
+    void setRetiredState(boolean retired) {
+        this.retired = retired;
+    }
+}
+```
+
+객체지향 프로그래밍 언어에서는 외부에서 클래스 필드에 직접 접근하는 경우가 드물다. 그 대신 접근을 제어할 getter와 setter가 필요하다.
+
+이러한 getter/setter는 여러 프레임워크에서 대부분 따르고 있다. 하이버네이트는 getter와 setter로 java 인스턴스와 SQL 데이터베이스 내 행을 변환하고 Jackson은 JSON 메시지에 사용된다.
+
+그렇기 때문에 java bean 명세에 잘 맞추어 작성해야 한다.
+
+```java
+class Astronaut {
+    private String name;
+    private boolean retired;
+
+    public Astronaut() {
+    }
+
+    public Astronaut(String name) {
+        this.name = name;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public boolean isRetired() {
+        return retired;
+    }
+
+    public void setRetired(boolean retired) {
+        this.retired = retired;
+    }
+
+}
+```
+
+코드를 반드시 Java bean으로 작성해야 하는 것은 아니지만 반드시 Java bean을 사용해야 하는 Java 프레임워크도 있다.
+
+## 4.3 한 글자로 명명하지 않기
+
+```java
+class Inventory {
+    List<Supply> sl = new ArrayList<>();
+
+    boolean isInStock(String n) {
+        Supply s = new Supply(n);
+        int l = 0;
+        int h = sl.size() - 1;
+
+        while (l <= h) {
+            int m = l + (h - l) / 2;
+            int c = sl.get(m).compareTo(s);
+
+            if (c < 0) {
+                l = m + 1;
+            } else if (c > 0) {
+                h = m - 1;
+            } else {
+                return true;
+            }
+        }
+
+        return false;
+    }
+}
+```
+
+한 글자 이름에는 이유가 있을 수 없다. 변수명이 계속 반복되고 ㅋ코드 맥랑에 어긋나면 읽기 점점 어려워진다. 그렇기 때문에 변수명에 의미를 불어 넣어야 한다. 하지만 한 글자로는 의미를 불어넣을 수 없다.
+
+```java
+class Inventory {
+    List<Supply> sortedList = new ArrayList<>();
+
+    boolean isInStock(String name) {
+        Supply supply = new Supply(name);
+        int low = 0;
+        int high = sortedList.size() - 1;
+
+        while (low <= high) {
+            int middle = low + (high - low) / 2;
+            int comparison = sortedList.get(middle).compareTo(supply);
+
+            if (comparison < 0) {
+                low = middle + 1;
+            } else if (comparison > 0) {
+                high = middle - 1;
+            } else {
+                return true;
+            }
+        }
+
+        return false;
+    }
+}
+```
+
+어차피 변수 이름은 사람이 읽는다. 의미없는 한 글자보다 의미가 뚜렷한 문장이나 단어가 훨씬 바람직하다.
+
+## 4.4 축약 쓰지 않기
+
+```java
+class Logbook {
+    static final Path DIR = Paths.get("/var/log");
+    static final Path CSV = DIR.resolve("stats.csv");
+    static final String GLOB = "*.log";
+
+    void createStats() throws IOException {
+        try (DirectoryStream<Path> dirStr =
+                     Files.newDirectoryStream(DIR, GLOB);
+             BufferedWriter bufW = Files.newBufferedWriter(CSV)) {
+            for (Path lFile : dirStr) {
+                String csvLn = String.format("%s,%d,%s",
+                        lFile,
+                        Files.size(lFile),
+                        Files.getLastModifiedTime(lFile));
+                bufW.write(csvLn);
+                bufW.newLine();
+            }
+        }
+    }
+}
+```
+
+축약을 아는 사람을 축약을 작성한 사람 뿐이다. 이러한 축약을 이해하기 위해선 추가적인 학습만 요구될 뿐이다.
+
+```java
+class Logbook {
+    static final Path LOG_FOLDER = Paths.get("/var/log");
+    static final Path STATISTICS_CSV = LOG_FOLDER.resolve("stats.csv");
+    static final String FILE_FILTER = "*.log";
+
+    void createStatistics() throws IOException {
+        try (DirectoryStream<Path> logs =
+                     Files.newDirectoryStream(LOG_FOLDER, FILE_FILTER);
+             BufferedWriter writer =
+                     Files.newBufferedWriter(STATISTICS_CSV)) {
+            for (Path log : logs) {
+                String csvLine = String.format("%s,%d,%s",
+                        log,
+                        Files.size(log),
+                        Files.getLastModifiedTime(log));
+                writer.write(csvLine);
+                writer.newLine();
+            }
+        }
+    }
+}
+```
+
+흔히 쓰이는 축약만 사용하고 그 외에는 전체 이름을 사용하는 것이 바람직하다. 축약은 피하고 매우 일반적인 경우에만 사요해야 한다. 확신이 없다면 풀어써라.
+
+## 4.5 무의미한 용어 쓰지 않기
+
+```java
+class MainSpaceShipManager {
+    AbstractRocketPropulsionEngine abstractRocketPropulsionEngine;
+    INavigationController navigationController;
+    boolean turboEnabledFlag;
+
+    void navigateSpaceShipTo(PlanetInfo planetInfo) {
+        RouteData data = navigationController.calculateRouteData(planetInfo);
+        LogHelper.logRouteData(data);
+        abstractRocketPropulsionEngine.invokeTask(data, turboEnabledFlag);
+    }
+}
+```
+
+"main", "manager", "data", "info" 등 자주 쓰이는 무의미한 용어는 아무 의미도 없지만 빈번히 사용되기도 한다.
+
+```java
+class SpaceShip {
+    Engine engine;
+    Navigator navigator;
+    boolean turboEnabled;
+
+    void navigateTo(Planet destination) {
+        Route route = navigator.calculateRouteTo(destination);
+        Logger.log(route);
+        engine.follow(route, turboEnabled);
+    }
+}
+```
+
+앞에서 언급한 용어에 주의하고 쓰고 싶더라도 한 번 더 생각해보는 것이좋다. 용어가 실제로 어떤 의미를 띄는지 아닌지는 구체적인 맥락에 따라 다르다.
+
+> 장미는 붉고 잎사귀는 푸른데 유독 자바에만 AbstractSingletonProxyFactoryBean 클래스가 있다. - [http://bash.org/?962108](http://bash.org/?962108)
+
+### 내 생각
+쓸데 없이 길다고 비꼬는 표현인가? Spring에 장황한 이름의 클래스 들이 많은데 적절한 트레이드 오프로 인한 결과물인지 궁금하다.
+
+당장 무의미한 용어를 쓰지 않기 위해 신경쓰는 것 보다, 좋은 예시의 코드들을 자주 접하며 자연스럽게 스며들 수 있도록 노력해야 겠다는 생각이 든다.
+
+## 4.6 도메인 용어 사용하기
+
+```java
+class Person {
+    String lastName;
+    String role;
+    int travels;
+    LocalDate employedSince;
+
+    String serializeAsLine() {
+        return String.join(",",
+                Arrays.asList(lastName,
+                        role,
+                        String.valueOf(travels),
+                        String.valueOf(employedSince))
+        );
+    }
+}
+```
+
+개발 중인 대부분의 코드는 특정 도메인에 속하고 도메인마다 각기 어휘가 있다. 프로그램에 해당하는 도메인 용어를 코드에 많이 넣을수록 코드는 점점 나아진다.
+
+`serializeAsLine()`이라는 메소드명은 매우 포괄적이다. 이름만으로는 어떤 사람의 필드들을 모아 줄바꿈없이 한 문자열로 직렬화한다는 것만 알 수 있을 뿐이다.
+
+```java
+class Astronaut {
+    String tagName;
+    String rank;
+    int missions;
+    LocalDate activeDutySince;
+
+    String toCSV() {
+        return String.join(",",
+                Arrays.asList(tagName,
+                        rank,
+                        String.valueOf(missions),
+                        String.valueOf(activeDutySince))
+        );
+    }
+}
+```
+
+맥락을 고려하니 다양한 속성의 의미를 이해하기 훨씬 쉽다. 가능하면 코드 내 이름은 해당 도메인에 맞게 짓고 포괄적인 명칭은 피해야 한다.

@@ -73,3 +73,25 @@ issue를 정리해서 close 한다.
 
    >  조영호, 『객체지향의 사실과 오해』, 위키북스(2015), p207-228.
 
+
+
+
+
+## 2. [자바 코딩의 기술 (사이먼 하러 외 2명, 길벗)](https://wikibook.co.kr/object-orientation/)
+
+1. [1장](https://github.com/Java-Awesome/Javawesome_reading_book/tree/main/%EC%9E%90%EB%B0%94_%EC%BD%94%EB%94%A9%EC%9D%98%EA%B8%B0%EC%88%A0/1%EC%9E%A5) - 2021.08.27
+
+   > 사이먼 하러 외 2명, 『자바 코딩의 기술』, 길벗(2020), p31-54.
+
+2. [2장](https://github.com/Java-Awesome/Javawesome_reading_book/tree/main/%EC%9E%90%EB%B0%94_%EC%BD%94%EB%94%A9%EC%9D%98%EA%B8%B0%EC%88%A0/2%EC%9E%A5) - 2021.08.27
+
+   > 사이먼 하러 외 2명, 『자바 코딩의 기술』, 길벗(2020), p32-78.
+
+3. [3장](https://github.com/Java-Awesome/Javawesome_reading_book/tree/main/%EC%9E%90%EB%B0%94_%EC%BD%94%EB%94%A9%EC%9D%98%EA%B8%B0%EC%88%A0/3%EC%9E%A5) - 2021.09.04
+
+   > 사이먼 하러 외 2명, 『자바 코딩의 기술』, 길벗(2020), p79-106.
+
+4. [4장](https://github.com/Java-Awesome/Javawesome_reading_book/tree/main/%EC%9E%90%EB%B0%94_%EC%BD%94%EB%94%A9%EC%9D%98%EA%B8%B0%EC%88%A0/4%EC%9E%A5) - 2021.09.04
+
+   > 사이먼 하러 외 2명, 『자바 코딩의 기술』, 길벗(2020), p107-126.
+

@@ -1,0 +1,560 @@
+# chapter 05 문제 발생에 대비하기
+
+> 오류가 없는 프로그램을 작성하는 두 가지 방법이 있는데 사실 세 번째 방법만 통한다. - 앨런 J. 펄리스
+
+## 5.1 빠른 실패
+
+```java
+class CruiseControl {
+    static final double SPEED_OF_LIGHT_KMH = 1079252850;
+    static final double SPEED_LIMIT = SPEED_OF_LIGHT_KMH;
+
+    private double targetSpeedKmh;
+
+    void setTargetSpeedKmh(double speedKmh) {
+        if (speedKmh < 0) {
+            throw new IllegalArgumentException();
+        } else if (speedKmh <= SPEED_LIMIT) {
+            targetSpeedKmh = speedKmh;
+        } else {
+            throw new IllegalArgumentException();
+        }
+    }
+}
+```
+
+위 코드는 예외 처리를 진행하고 있다. 하지만 분기 세 개 중 두 번째가 정상적인 제어 흐름인데 앞뒤로 두 개의 예외 처리 분기에 둘러싸여 있다. 
+
+우리가 관심 가진 부분은 실제로 기능이 동작하는 정상적인 제어 흐름이다. 위 코드는 또한 조건 분기가 서로 연결되어 있기 때문에 모든 조건을 이해해야 한다. 이것은 불필요한 낭비일 뿐이다.
+
+```java
+class CruiseControl {
+    static final double SPEED_OF_LIGHT_KMH = 1079252850;
+    static final double SPEED_LIMIT = SPEED_OF_LIGHT_KMH;
+
+    private double targetSpeedKmh;
+
+    void setTargetSpeedKmh(double speedKmh) {
+        if (speedKmh < 0 || speedKmh > SPEED_LIMIT) {
+            throw new IllegalArgumentException();
+        }
+
+        targetSpeedKmh = speedKmh;
+    }
+}
+```
+
+메소드가 `빠르게 실패한다`.
+
+빠른 실패는 메소드 전체를 읽고 이해하기 쉽게 다가온다. 첫 번째 매개변수 검증, 그 다음 일반적인 메소드 경로가 나온다. 그렇기 때문에 메소드의 핵심 내용을 파악하기 편리하다.
+
+## 5.2 항상 가장 구체적인 예외 잡기
+
+```java
+class TransmissionParser {
+    static Transmission parse(String rawMessage) {
+        if (rawMessage != null
+                && rawMessage.length() != Transmission.MESSAGE_LENGTH) {
+            throw new IllegalArgumentException("Bad message received!");
+        }
+
+        String rawId = rawMessage.substring(0, Transmission.ID_LENGTH);
+        String rawContent = rawMessage.substring(Transmission.ID_LENGTH);
+        try {
+            int id = Integer.parseInt(rawId);
+            String content = rawContent.trim();
+            return new Transmission(id, content);
+        } catch (Exception e) {
+            throw new IllegalArgumentException("Bad message received!");
+        }
+    }
+}
+```
+
+Java의 예외는 복잡한 계층 구조를 가지고 있기 때문에 예외를 잡으려면 항상 가장 구체적인 예외 타입을 잡아야 한다. 일반적인 타입을 잡으면 잡아선 안될 오류 까지 잡힐 위험이 있다.
+
+```java
+class TransmissionParser {
+    static Transmission parse(String rawMessage) {
+        if (rawMessage != null &&
+                rawMessage.length() != Transmission.MESSAGE_LENGTH) {
+            throw new IllegalArgumentException("Bad message received!");
+        }
+
+        String rawId = rawMessage.substring(0, Transmission.ID_LENGTH);
+        String rawContent = rawMessage.substring(Transmission.ID_LENGTH);
+        try {
+            int id = Integer.parseInt(rawId);
+            String content = rawContent.trim();
+            return new Transmission(id, content);
+        } catch (NumberFormatException e) {
+            throw new IllegalArgumentException("Bad message received!");
+        }
+    }
+}
+```
+
+`Exception` 대신 `try` 내 코드에서 던질 만한 가장 구체적인 예외를 잡으면 된다.
+
+가장 구체적인 예외를 잡기 위해 여러 예외를 잡아야 할 수도 있다. 코드가 늘어난다고 일반적인 예외 유형을 잡는 것은 예상치 못한 결과를 만들어 낼 수 있다.
+
+다행히 Java 7 이후 부터 다중 캐치 블록이 생겼다. 이러한 것들을 적절히 활용하면 코드의 길이를 적절히 줄일 수 있을 것이다.
+
+[Catching Multiple Exception Types and Rethrowing Exceptions with Improved Type Checking](https://docs.oracle.com/javase/8/docs/technotes/guides/language/catch-multiple.html)
+
+어떤 방법으로 catch block을 조작하든 가장 구체적인 예외만 잡는 것이 중요하다.
+
+### 5.3 메시지로 원인 설명
+
+```java
+class TransmissionParser {
+    static Transmission parse(String rawMessage) {
+        if (rawMessage != null
+                && rawMessage.length() != Transmission.MESSAGE_LENGTH) {
+            throw new IllegalArgumentException();
+        }
+
+        String rawId = rawMessage.substring(0, Transmission.ID_LENGTH);
+        String rawContent = rawMessage.substring(Transmission.ID_LENGTH);
+        try {
+            int id = Integer.parseInt(rawId);
+            String content = rawContent.trim();
+            return new Transmission(id, content);
+        } catch (NumberFormatException e) {
+            throw new IllegalArgumentException("Bad message received!");
+        }
+    }
+}
+```
+
+예외 처리는 예외를 잡는 것과 던지는 것 까지 포함이다. 예외를 던질 때는 타입 규칙을 지켜야 예외를 더 쉽게 처리할 수 있다.
+
+예외의 타입만 보아도 무엇이 잘못 됬는지 확인할 수 있다. 간단한 예시이다.
+* `IllegalArgumentException`: 메소드에 잘못된 매개변수
+* `FileNotFoundException`: 존재하지 않는 파일을 읽을 때
+
+예외 자체로 자세한 맥락을 알 수 있다면 추적하기 더욱 쉬울 것이다. 하지만 위 코드에서 던지는 예외는 맥락이 부족하다.
+
+```java
+class TransmissionParser {
+    static Transmission parse(String rawMessage) {
+        if (rawMessage != null
+                && rawMessage.length() != Transmission.MESSAGE_LENGTH) {
+            throw new IllegalArgumentException(
+                String.format("Expected %d, but got %d characters in '%s'",
+                    Transmission.MESSAGE_LENGTH, rawMessage.length(),
+                    rawMessage));
+        }
+
+        String rawId = rawMessage.substring(0, Transmission.ID_LENGTH);
+        String rawContent = rawMessage.substring(Transmission.ID_LENGTH);
+        try {
+            int id = Integer.parseInt(rawId);
+            String content = rawContent.trim();
+            return new Transmission(id, content);
+        } catch (NumberFormatException e) {
+            throw new IllegalArgumentException(
+                String.format("Expected number, but got '%s' in '%s'",
+                        rawId, rawMessage));
+        }
+    }
+}
+```
+
+정보를 누락하거나 쓸모없는 정보를 제공하는 대신 바라는 것, 받은 것, 전체 맥락 세 가지를 골고루 제공하고 있다. 개발자는 이와 같은 자세한 정보로 예외의 근본적인 원인을 훨씬 더 빨리 추적한다.
+
+## 5.4 원인 사슬 깨지 않기
+
+```java
+class TransmissionParser {
+    static Transmission parse(String rawMessage) {
+        if (rawMessage != null
+                && rawMessage.length() != Transmission.MESSAGE_LENGTH) {
+            throw new IllegalArgumentException(
+                String.format("Expected %d, but got %d characters in '%s'",
+                        Transmission.MESSAGE_LENGTH, rawMessage.length(),
+                        rawMessage));
+        }
+
+        String rawId = rawMessage.substring(0, Transmission.ID_LENGTH);
+        String rawContent = rawMessage.substring(Transmission.ID_LENGTH);
+        try {
+            int id = Integer.parseInt(rawId);
+            String content = rawContent.trim();
+            return new Transmission(id, content);
+        } catch (NumberFormatException e) {
+            throw new IllegalArgumentException(
+                String.format("Expected number, but got '%s' in '%s'",
+                        rawId, rawMessage));
+        }
+    }
+}
+```
+
+예외는 또 다른 예외를 발생시킬 수 있다. 예외를 잡았지만 처리할 수 없다면 반드시 다시 던져야 한다. 오류를 제대로 처리 했다면 원인 사실, 즉 각 예외가 그 예외를 일으킨 예외와 연결된 리스트를 보여주는 스택 추적을 확인할 수 있다.
+
+하지만 위 코드는 `NumberFormatException`을 잡아도 또 다른 유용한 `message`와 함께 새 `IllegalArgumentException`을 던진다. 
+
+하지만 스택 추적을 아무리 살펴보아도 `NumberFormatException`는 찾을 수 없을 것이다. 
+
+```java
+class TransmissionParser {
+    static Transmission parse(String rawMessage) {
+        if (rawMessage != null
+                && rawMessage.length() != Transmission.MESSAGE_LENGTH) {
+            throw new IllegalArgumentException(
+                String.format("Expected %d, but got %d characters in '%s'",
+                        Transmission.MESSAGE_LENGTH, rawMessage.length(),
+                        rawMessage));
+        }
+
+        String rawId = rawMessage.substring(0, Transmission.ID_LENGTH);
+        String rawContent = rawMessage.substring(Transmission.ID_LENGTH);
+        try {
+            int id = Integer.parseInt(rawId);
+            String content = rawContent.trim();
+            return new Transmission(id, content);
+        } catch (NumberFormatException e) {
+            throw new IllegalArgumentException(
+                String.format("Expected number, but got '%s' in '%s'",
+                    rawId, rawMessage), e);
+        }
+    }
+}
+```
+
+예외에는 다양한 생성자가 있다. catch 블록에서 예외를 던질 때 message와 잡았던 예외를 원인으로 전달하면 된다.
+
+```java
+throw new IllegalArgumentException("Message", e);
+```
+
+### 5.5 변수로 원인 노출
+
+```java
+class TransmissionParser {
+    static Transmission parse(String rawMessage) {
+        if (rawMessage != null
+                && rawMessage.length() != Transmission.MESSAGE_LENGTH) {
+            throw new IllegalArgumentException(
+                String.format("Expected %d, but got %d characters in '%s'",
+                    Transmission.MESSAGE_LENGTH, rawMessage.length(),
+                    rawMessage));
+        }
+
+        String rawId = rawMessage.substring(0, Transmission.ID_LENGTH);
+        String rawContent = rawMessage.substring(Transmission.ID_LENGTH);
+        try {
+            int id = Integer.parseInt(rawId);
+            String content = rawContent.trim();
+            return new Transmission(id, content);
+        } catch (NumberFormatException e) {
+            throw new IllegalArgumentException(
+                String.format("Expected number, but got '%s' in '%s'",
+                    rawId, rawMessage), e);
+        }
+    }
+}
+```
+
+예외는 필드와 메소드, 생성자를 가질 수 있는 클래스이다. IllegalArgumentException의 message에 두 번이나 "in %s"라는 같은 방식으로 rawMessage를 넣으니 코드가 중복된다.
+
+또한 정보는 감추어져 있다. 나중에 어떤 종류의 메시지가 오류를 일으켰는지 알고 싶을 때 추출에 어려움이 있다.
+
+```java
+class TransmissionParser {
+    static Transmission parse(String rawMessage) {
+        if (rawMessage != null
+                && rawMessage.length() != Transmission.MESSAGE_LENGTH) {
+            throw new MalformedMessageException(
+                String.format("Expected %d, but got %d characters",
+                    Transmission.MESSAGE_LENGTH, rawMessage.length()),
+                    rawMessage);
+        }
+
+        String rawId = rawMessage.substring(0, Transmission.ID_LENGTH);
+        String rawContent = rawMessage.substring(Transmission.ID_LENGTH);
+        try {
+            int id = Integer.parseInt(rawId);
+            String content = rawContent.trim();
+            return new Transmission(id, content);
+        } catch (NumberFormatException e) {
+            throw new MalformedMessageException(
+                String.format("Expected number, but got '%s'", rawId),
+                rawMessage, e);
+        }
+    }
+}
+
+final class MalformedMessageException extends IllegalArgumentException {
+    final String raw;
+
+    MalformedMessageException(String message, String raw) {
+        super(String.format("%s in '%s'", message, raw));
+        this.raw = raw;
+    }
+    MalformedMessageException(String message, String raw, Throwable cause) {
+        super(String.format("%s in '%s'", message, raw), cause);
+        this.raw = raw;
+    }
+}
+```
+
+맞춤형 예외, 즉 그 예외 만의 raw 메시지 필드가 들어간 `MalformedMessageException`을 정의하고 사용하면 된다. 향후 최종 사용자 정보를 자세히 알고 싶거나 예외를 더 철저히 처리하고 싶을 때 raw 필드를 쉽게 추출 할 수 있다.
+
+클래스와 그 필드를 final로 선언해 맞춤형 예외를 불변으로만 만들면 된다.
+
+### 5.6 타입 변환 전에 항상 타입 검증하기
+
+```java
+class Network {
+
+    ObjectInputStream inputStream;
+    InterCom interCom;
+
+    void listen() throws IOException, ClassNotFoundException {
+        while (true) {
+            Object signal = inputStream.readObject();
+            CrewMessage crewMessage = (CrewMessage) signal;
+            interCom.broadcast(crewMessage);
+        }
+    }
+}
+```
+
+프로그램에서 동적 객체를 사용하려면 명시적으로 어떤 타입으로든 변환(casting)해야 한다. 적절히 변환하지 않으면 프로그램은 `RuntimeException`과 같은 예외를 일으키며 충돌할 수 있다.
+
+위 코드에서 만약 누군가가 다름 메시지 타입을 삽입하게 되면 클래스 전체가 `ClassCastException`을 일으키며 충돌할 것이다.
+
+변환 전에 타입 검증을 적절히 처리해야 한다.
+
+```java
+class Network {
+
+    ObjectInputStream inputStream;
+    InterCom interCom;
+
+    void listen() throws IOException, ClassNotFoundException {
+        while (true) {
+            Object signal = inputStream.readObject();
+            if (signal instanceof CrewMessage) {
+                CrewMessage crewMessage = (CrewMessage) signal;
+                interCom.broadcast(crewMessage);
+            }
+        }
+    }
+}
+```
+
+가장 주목해서 봐야할 부분은 `instanceof` 연산자를 통해 타입을 검증하고 signal을 읽는 것이다. 결국 참일 때만 명시적인 변환이 가능하다. 그렇기 때문에 `ClassCastException`은 발생하지 않을 것이다.
+
+프로그램이 외부와 상호작용할 때는 항상 예상하지 못한 입력을 처리할 수 있도록 대비해야 한다.
+
+### 5.7 항상 자원 닫기
+
+```java
+class Logbook {
+
+    static final Path LOG_FOLDER = Paths.get("/var/log");
+    static final String FILE_FILTER = "*.log";
+
+    List<Path> getLogs() throws IOException {
+        List<Path> result = new ArrayList<>();
+
+        DirectoryStream<Path> directoryStream =
+                Files.newDirectoryStream(LOG_FOLDER, FILE_FILTER);
+        for (Path logFile : directoryStream) {
+            result.add(logFile);
+        }
+        directoryStream.close();
+
+        return result;
+    }
+}
+```
+
+프로그램에는 디스크 공간이나 데이터베이스, 네트워크 연결, CPU 스레드, RAM과 같은 시스템 자원이 필요하다. 이러한 자원은 제한되어 있기 때문에 프로그램 자원을 서로 공유해야 한다. 한 프로그램ㅇ에서 자원을 해제하지 않고 계속 가지고 있으면 전체 환경에 영향을 끼칠 수 있다.
+
+위 코드는 `directoryStream.close()`를 활용하여 자원을 해체하고 있다. 하지만 프로그램이 자원을 연 후 `close()`로 자원을 해제하기 전에 자원을 사용하다가 예외가 발생한다면 `close()`는 정상적으로 실행되지 않을 것이다. 이것은 '**자원 누출**(resource leak)'을 야기할 수 있다.
+
+```java
+class Logbook {
+
+    static final Path LOG_FOLDER = Paths.get("/var/log");
+    static final String FILE_FILTER = "*.log";
+
+    List<Path> getLogs() throws IOException {
+        List<Path> result = new ArrayList<>();
+
+        try (DirectoryStream<Path> directoryStream =
+                     Files.newDirectoryStream(LOG_FOLDER, FILE_FILTER)) {
+            for (Path logFile : directoryStream) {
+                result.add(logFile);
+            }
+        }
+
+        return result;
+    }
+}
+```
+
+java 7부터 try-with-resources 구문은 자원을 안전하게 close하는 것을 보장한다. `AutoCloseable`인터페이스를 구현한 클래스여야 동작하며 실제로 Java API내 자원 클래스는 모두 이 구문을 따라 작성되어 있다.
+
+사실 try-with-resources는 단지 문법적으로 쓰기 편한 표현(syntactic sugar)이다. 컴파일러는 아래와 같이 확장한다.
+
+```java
+DirectoryStream<Path> resource = Files.newDirectoryStream(LOG_FOLDER, FILE_FILTER);
+try {
+    // 자원 사용
+} finally {
+    if (resources != null) {
+        resource.close();
+    }
+}
+```
+
+finally 블록에서 자원을 닫는 것을 보장한다. 또한 추가적인 null 검증을 통하여 `NullPointerException`도 피할 수 있다.
+
+이러한 귀찮은 과정들은 생략하고 컴파일러가 처리할 수 있는 try-with-resources를 사용하자!
+
+[The try-with-resources Statement](https://docs.oracle.com/javase/tutorial/essential/exceptions/tryResourceClose.html)
+
+### 5.8 항상 다수 자원 닫기
+
+```java
+class Logbook {
+
+    static final Path LOG_FOLDER = Paths.get("/var/log");
+    static final Path STATISTICS_CSV = LOG_FOLDER.resolve("stats.csv");
+    static final String FILE_FILTER = "*.log";
+
+    void createStatistics() throws IOException {
+        DirectoryStream<Path> directoryStream =
+                Files.newDirectoryStream(LOG_FOLDER, FILE_FILTER);
+        BufferedWriter writer =
+                Files.newBufferedWriter(STATISTICS_CSV);
+
+        try {
+            for (Path logFile : directoryStream) {
+                final String csvLine = String.format("%s,%d,%s",
+                        logFile,
+                        Files.size(logFile),
+                        Files.getLastModifiedTime(logFile));
+                writer.write(csvLine);
+                writer.newLine();
+            }
+        } finally {
+            directoryStream.close();
+            writer.close();
+        }
+    }
+}
+```
+
+올바르게 자원 닫기는 프로그램 안정성에 매우 중요하다. 하지만 실수 없이 여러 자원을 동시에 사용하면서 닫기는 더욱 어렵게 다가온다.
+
+```java
+class Logbook {
+
+    static final Path LOG_FOLDER = Paths.get("/var/log");
+    static final Path STATISTICS_CSV = LOG_FOLDER.resolve("stats.csv");
+    static final String FILE_FILTER = "*.log";
+
+    void createStatistics() throws IOException {
+        try (DirectoryStream<Path> directoryStream =
+                     Files.newDirectoryStream(LOG_FOLDER, FILE_FILTER);
+             BufferedWriter writer =
+                     Files.newBufferedWriter(STATISTICS_CSV)) {
+            for (Path logFile : directoryStream) {
+                String csvLine = String.format("%s,%d,%s",
+                        logFile,
+                        Files.size(logFile),
+                        Files.getLastModifiedTime(logFile));
+                writer.write(csvLine);
+                writer.newLine();
+            }
+        }
+    }
+}
+```
+
+이때 필요한 것은 앞서 언급한 `try-with-resources` 구문이다. try-with-resources는 동시에 여러 자원을 처리할 수도 있다. 여러 자원을 사용하고 항상 close가 보장되길 원하면 사용하는 것을 권장한다.
+
+```java
+try (open resource1; open resource2) {
+    // 자원 사용
+}
+```
+
+내부적으로 컴파일러는 try-with-resources 블록 내 각 자원을 확장해 여러 중첩 블록을 생성한다. 
+
+```java
+// resource1 열기
+try {
+    // resource2 열기
+    try {
+        // resource1과 resource2 사용
+    } finally {
+        resource2.close();
+    }
+} finally {
+    resource1.close();
+}
+```
+
+### 5.9 빈 catch 블록 설명하기
+
+```java
+class Logbook {
+
+    static final Path LOG_FOLDER = Paths.get("/var/log");
+    static final String FILE_FILTER = "*.log";
+
+    List<Path> getLogs() throws IOException {
+        List<Path> result = new ArrayList<>();
+
+        try (DirectoryStream<Path> directoryStream =
+                     Files.newDirectoryStream(LOG_FOLDER, FILE_FILTER)) {
+            for (Path logFile : directoryStream) {
+                result.add(logFile);
+            }
+        } catch (NotDirectoryException e) {
+
+        }
+
+        return result;
+    }
+}
+```
+
+예외는 예외를 의미 있게 처리할 수 있을 때만 잡아야 한다. catch 블록에는 예외를 처리하는 코드가 들어 간다. 
+
+예외를 그냥 넘기고 아무 것도 하지 말아야 할 때도 있다. 그럴 때는 그냥 비워두는 것 보다 의도를 설명하는 것이 좋다.
+
+```java
+class Logbook {
+
+    static final Path LOG_FOLDER = Paths.get("/var/log");
+    static final String FILE_FILTER = "*.log";
+
+    List<Path> getLogs() throws IOException {
+        List<Path> result = new ArrayList<>();
+
+        try (DirectoryStream<Path> directoryStream =
+                     Files.newDirectoryStream(LOG_FOLDER, FILE_FILTER)) {
+            for (Path logFile : directoryStream) {
+                result.add(logFile);
+            }
+        } catch (NotDirectoryException ignored) {
+            // 디렉토리가 없으면 -> 로그도 없다!
+        }
+
+        return result;
+    }
+}
+```
+
+1. 예외 변수명을 e에서 ignored로 바꾸었다. 예외를 무시하겠다고 명시적으로 드러낸 것이다.
+2. 예외를 왜 무시했는지 주석을 추가했다.
+
+먼저 이름을 바꾸고 주석을 넣길 권장한다. 궁극적으로 변수에는 항상 이름이 있어야 하고 흔한 e보다 더 나은 이름을 짓는 것이 좋다.

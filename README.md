@@ -85,7 +85,7 @@ issue를 정리해서 close 한다.
 
 2. [2장](https://github.com/Java-Awesome/Javawesome_reading_book/tree/main/%EC%9E%90%EB%B0%94_%EC%BD%94%EB%94%A9%EC%9D%98%EA%B8%B0%EC%88%A0/2%EC%9E%A5) - 2021.08.27
 
-   > 사이먼 하러 외 2명, 『자바 코딩의 기술』, 길벗(2020), p32-78.
+   > 사이먼 하러 외 2명, 『자바 코딩의 기술』, 길벗(2020), p55-78.
 
 3. [3장](https://github.com/Java-Awesome/Javawesome_reading_book/tree/main/%EC%9E%90%EB%B0%94_%EC%BD%94%EB%94%A9%EC%9D%98%EA%B8%B0%EC%88%A0/3%EC%9E%A5) - 2021.09.04
 
@@ -94,4 +94,14 @@ issue를 정리해서 close 한다.
 4. [4장](https://github.com/Java-Awesome/Javawesome_reading_book/tree/main/%EC%9E%90%EB%B0%94_%EC%BD%94%EB%94%A9%EC%9D%98%EA%B8%B0%EC%88%A0/4%EC%9E%A5) - 2021.09.04
 
    > 사이먼 하러 외 2명, 『자바 코딩의 기술』, 길벗(2020), p107-126.
+   
+5. [5장](https://github.com/Java-Awesome/Javawesome_reading_book/tree/main/%EC%9E%90%EB%B0%94_%EC%BD%94%EB%94%A9%EC%9D%98%EA%B8%B0%EC%88%A0/5%EC%9E%A5) - 2021.09.10
+
+   > 사이먼 하러 외 2명, 『자바 코딩의 기술』, 길벗(2020), p127-153.
+
+6. [6장](https://github.com/Java-Awesome/Javawesome_reading_book/tree/main/%EC%9E%90%EB%B0%94_%EC%BD%94%EB%94%A9%EC%9D%98%EA%B8%B0%EC%88%A0/6%EC%9E%A5) - 2021.09.10
+
+   > 사이먼 하러 외 2명, 『자바 코딩의 기술』, 길벗(2020), p155-182.
+
+
 

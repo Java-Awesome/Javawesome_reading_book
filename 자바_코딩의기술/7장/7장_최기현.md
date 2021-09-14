@@ -1,0 +1,494 @@
+# chapter 07 객체 디자인
+
+> 컴퓨터 과학의 모든 문제는 또 다른 간접 계층을 추가해 풀 수 있다. 하지만 대부분 또 다른 문제를 양산한다. - 데이비드 휠러
+
+## 7.1 불 매개변수로 메소드 분할
+
+```java
+class Logbook {
+
+    static final Path CAPTAIN_LOG = Paths.get("/var/log/captain.log");
+    static final Path CREW_LOG = Paths.get("/var/log/crew.log");
+
+    void log(String message, boolean classified) throws IOException {
+        if (classified) {
+            writeMessage(message, CAPTAIN_LOG);
+        } else {
+            writeMessage(message, CREW_LOG);
+        }
+    }
+
+    void writeMessage(String message, Path location) throws IOException {
+        String entry = LocalDate.now() + " " + message;
+        Files.write(location, Collections.singleton(entry),
+                StandardCharsets.UTF_8, StandardOpenOption.APPEND);
+    }
+}
+```
+
+일반적으로 메소드는 하나의 작업에만 특화되어야 한다. `boolean` 메소드 매개변수는 메소드가 적어도 두 가지 작업을 수행함을 뜻한다.
+
+`Logbook` 클래스의 `log()` 메소드는 변수를 사용해 메시지를 공개와 비공개 메시지로 나눌 수 있다.
+
+```java
+logbook.log("Aliens sighted!", true);
+logbook.log("Toilet broken.", false);
+```
+
+코드에 버그는 없지만 읽기 불편하고 구조화가 덜 되어 있다. 코드를 읽으면 누구나 boolean 매개변수의 목적을 알 수 있어야 한다.
+
+또한 두 로그는 연관되어 있다. 같은 메소드에서 처리되다보니 기장의 로그 로직을 변경하면 승무원 로그에도 영향을 미칠 위험이 있다.
+
+```java
+class Logbook {
+
+    static final Path CAPTAIN_LOG = Paths.get("/var/log/captain.log");
+    static final Path CREW_LOG = Paths.get("/var/log/crew.log");
+
+    void writeToCaptainLog(String message) throws IOException {
+        writeMessage(message, CAPTAIN_LOG);
+    }
+
+    void writeToCrewLog(String message) throws IOException {
+        writeMessage(message, CREW_LOG);
+    }
+
+    void writeMessage(String message, Path location) throws IOException {
+        String entry = LocalDate.now() + " " + message;
+        Files.write(location, Collections.singleton(entry),
+                StandardCharsets.UTF_8, StandardOpenOption.APPEND);
+    }
+}
+```
+
+방법은 boolean인 메소드 매개변수를 제거하고 이 매개변수로 구분하던 각 제억 흐름 경로마다 새 메소드를 추가하는 것이다.
+
+```java
+logbook.writeToCaptainLog("Aliens sighted!");
+logbook.writeToCrewLog("Toilet broken. Again ...");
+```
+
+이제 위와 같이 사용할 수 있다. 메소드명만 확인해도 어떤 로그에 속하는지 분명히 알 수 있다.
+
+## 7.2 옵션 매개변수로 메소드 분할
+
+```java
+class Logbook {
+
+    static final Path CREW_LOG = Paths.get("/var/log/crew.log");
+
+    List<String> readEntries(LocalDate date) throws IOException {
+        final List<String> entries = Files.readAllLines(CREW_LOG,
+                StandardCharsets.UTF_8);
+        if (date == null) {
+            return entries;
+        }
+
+        List<String> result = new LinkedList<>();
+        for (String entry : entries) {
+            if (entry.startsWith(date.toString())) {
+                result.add(entry);
+            }
+        }
+        return result;
+    }
+}
+```
+
+옵션 매개변수는 앞서 언급한 boolean 매개변수보다 찾기가 더 어렵다.
+
+```java
+List<String> completeLog = logbook.readEntries(null);
+
+inal LocalDate moonLanding = LocalDate.of(1969, Month.JULY, 20);
+List<String> moonLandingLog = logbook.readEntries(moonLanding);
+```
+
+로그 항목마다 날짜가 있으니 입력 매개변수인 `date로` 명시하여 항목을 선택할 수 있다. 실제 날짜가 아닌 경우 `null`을 삽입하면 `readEntries()`는 로그 항목 전체를 반환한다.
+
+또한 null 매개변수로 메소드를 호출하면 기대하는 바를 예측하기가 어렵다.
+
+```java
+class Logbook {
+
+    static final Path CREW_LOG = Paths.get("/var/log/crew.log");
+
+    List<String> readEntries(LocalDate date) throws IOException {
+        Objects.requireNonNull(date);
+        
+        List<String> result = new LinkedList<>();
+        for (String entry : readAllEntries()) {
+            if (entry.startsWith(date.toString())) {
+                result.add(entry);
+            }
+        }
+        return result;
+    }
+
+    List<String> readAllEntries() throws IOException {
+        return Files.readAllLines(CREW_LOG, StandardCharsets.UTF_8);
+    }
+}
+```
+
+우선 메소드를 두 개로 분할한다. 각각 제어 흐름 분기를 하나씩 표현한다. 또한 `readEntries()` 메소드는 date를 선택 매개변수로 더 이상 허용하지 않는 대신 `NullPoiterException`을 던진다. 
+
+기존 모든 항목을 return하는 것은 `readAllEntries()`가 처리한다.
+
+```java
+List<String> completeLog = logbook.readAllEntries();
+
+inal LocalDate moonLanding = LocalDate.of(1969, Month.JULY, 20);
+List<String> moonLandingLog = logbook.readEntries(moonLanding);
+```
+
+메소드명을 통해 모든 항목을 읽겠다고 명확히 전달하니 훨씬 이해하기가 쉬워진다. 가독성이 높아진 덕분에 명시적으로 `null`을 사용할 필요도 사라진다. `null` 값을 없앨수록 의도치 않게 발생하는 `NullPointerException`이 일어날 가능성은 줄어든다.
+
+## 7.3 구체 타입보다 추상 타입
+
+```java
+class Inventory {
+    LinkedList<Supply> supplies = new LinkedList();
+
+    void stockUp(ArrayList<Supply> delivery) {
+        supplies.addAll(delivery);
+    }
+
+    LinkedList<Supply> getContaminatedSupplies() {
+        LinkedList<Supply> contaminatedSupplies = new LinkedList<>();
+        for (Supply supply : supplies) {
+            if (supply.isContaminated()) {
+                contaminatedSupplies.add(supply);
+            }
+        }
+        return contaminatedSupplies;
+    }
+}
+```
+
+인터페이스와 클래스는 흔히 광범위한 타입 계층 구조를 형성한다. 위 클래스는 아래처럼 사용한다.
+
+```java
+Stack<Supply> delivery = cargoShip.unload();
+ArrayList<Supply> loadableDelivery = new ArrayList<>(delivery);
+inventory.stockUp(loadableDelivery);
+```
+
+하지만 `Inventory`에 제품을 채우려면 `ArrayList`가 필요하다. 그렇기 때문에 제품을 `ArrayList`로 옮겨야 한다.
+
+하지만 추상 타입을 사용하면 불필요한 변환 과정을 해결할 수 있다.
+
+```java
+class Inventory {
+    List<Supply> supplies = new LinkedList();
+
+    void stockUp(Collection<Supply> delivery) {
+        supplies.addAll(delivery);
+    }
+
+    List<Supply> getContaminatedSupplies() {
+        List<Supply> contaminatedSupplies = new LinkedList<>();
+        for (Supply supply : supplies) {
+            if (supply.isContaminated()) {
+                contaminatedSupplies.add(supply);
+            }
+        }
+        return contaminatedSupplies;
+    }
+}
+```
+
+1. `supplies` 필드에 `LinkedList` 대신 `List` 인터페이스 타입을 사용한다. 이로써 제품은 순서대로 저장되지만 어떻게 저장되는지는 알 수 없다.
+
+2. `stockUp()` 메소드가 어떤 `Collection`이든 허용한다. `Collection`은 Java에서 자료 구조에 객체를 저장하는 가장 기본적인 인터페이스이다. `Collection`의 어떤 하위 타입이든, 즉 Java의 어떤 복잡한 자료 구조이든 이 메소드로 전달할 수 있다.
+
+3. getContaminatedSupplies() 메소드가 더 구체적인 타입이 아닌 List를 반환한다. 제품은 반드시 정렬된 상태로 반환되지만 내부적으로 리스트를 어떻게 구현했는지는 알려지지 않는다. 코드는 더욱 유연해진다.
+
+```java
+Stack<Supply> delivery = cargoShip.unload();
+inventory.stockUp(delivery);
+```
+
+## 7.4 가변 상태보다 불변 상태 사용하기
+
+```java
+class Distance {
+    DistanceUnit unit;
+    double value;
+
+    Distance(DistanceUnit unit, double value) {
+        this.unit = unit;
+        this.value = value;
+    }
+
+    static Distance km(double value) {
+        return new Distance(DistanceUnit.KILOMETERS, value);
+    }
+
+    void add(Distance distance) {
+        distance.convertTo(unit);
+        value += distance.value;
+    }
+
+    void convertTo(DistanceUnit otherUnit) {
+        double conversionRate = unit.getConversionRate(otherUnit);
+        unit = otherUnit;
+        value = conversionRate * value;
+    }
+}
+```
+
+기본적으로 객체의 상태는 불변이다. 가능하면 객체를 불변으로 만들어야 잘못 사용할 경우가 적다.
+
+하지만 아래 코드는 보면 오용할 여지가 있다.
+
+```java
+Distance toMars = new Distance(DistanceUnit.KILOMETERS, 56_000_000);
+Distance marsToVenus = new Distance(DistanceUnit.LIGHTYEARS, 0.000012656528);
+Distance toVenusViaMars = toMars;
+toVenusViaMars.add(marsToVenus);
+```
+
+위 코드의 문제는 `toVenusViaMars`와 `toMars`가 가리키는 객체가 같다는 점이다. `toVenusViaMars.add(marsToVenus)`를 호출하면 `toMars`의 값까지 간접적으로 변경한다.
+
+```java
+final class Distance {
+    final DistanceUnit unit;
+    final double value;
+
+
+    Distance(DistanceUnit unit, double value) {
+        this.unit = unit;
+        this.value = value;
+    }
+
+    Distance add(Distance distance) {
+        return new Distance(unit, value + distance.convertTo(unit).value);
+    }
+
+    Distance convertTo(DistanceUnit otherUnit) {
+        double conversionRate = unit.getConversionRate(otherUnit);
+        return new Distance(otherUnit, conversionRate * value);
+    }
+}
+```
+
+객체는 유효하지 않은 변경이 일어나지 않도록 스스로 보호해야 하는데 가변성을 제한하면 가능하다. 
+
+생성자의 `value`와 `unit` 필드에 `final` 키워드를 설정했지 때문에 이후로는 바뀔 수 없다. 거리는 계산하려면 매번 새로운 인스턴스가 필요하다.
+
+```java
+Distance toMars = new Distance(DistanceUnit.KILOMETERS, 56_000_000);
+Distance marsToVenus = new Distance(DistanceUnit.LIGHTYEARS, 0.000012656528);
+Distance toVenusViaMars = toMars.add(marsToVenus)
+                                        .convertTo(DistanceUnit.MILES);
+```
+
+이제 이전과 같은 실수를 더 이상 저지할 수 없다. 객체를 더 많이 생성한다는 단점은 이지만 Java에서 작은 객체는 적은 비용을 만든다.
+
+소프트웨어 디자인 관점에서 이 방법은 **값 객체**(Value Object)를 처리하는 방법으로서 여기에는 백분율, 돈, 통화, 시간, 날짜, 좌표, 당연히 거리도 포함된다. 이러한 객체는 값이 서로 같으면 구분하기 힘들다. 그렇기 때문에 **값 객체**에 항상 주의하고 불변으로 만들어야 한다.
+
+클래스 정의 앞에 `final` 키워드는 클래스를 더 이상 확장할 수 없기 하려는 의도이다.
+
+## 7.5 상태와 동작 결합하기
+
+```java
+class Hull {
+    int holes;
+}
+
+
+class HullRepairUnit {
+
+    void repairHole(Hull hull) {
+        if (isIntact(hull)) {
+            return;
+        }
+        hull.holes--;
+    }
+
+    boolean isIntact(Hull hull) {
+        return hull.holes == 0;
+    }
+}
+```
+
+상태와 동작의 결합은 객체 지향 프로그래밍의 기본 틀 중 하나이다. 동작만 있고 상태가 없는 클래스는 객체 지향 디자인에 문제가 있다는 뜻이다.
+
+초보자는 코드에서 종종 User와 UserController, Order와 OrderManager 등이 흔한 예이다. 
+
+문제는 위와 같이 분리하면 `정보 은닉(information hiding)`이 불가능해지고 코드가 더 장황해진다. `Hull` 클래스는 `HullRepairUnit`에게 자신의 상태에 대한 `읽기`와 `쓰기` 접근을 제공해야 한다. 다른 객체가 홀 개수에 접근하고 수정하는 것을 막기 어렵다. 또한 매개변수도 검증하지 않는다.
+
+```java
+class Hull {
+    int holes;
+
+    void repairHole() {
+        if (isIntact()) {
+            return;
+        }
+        holes--;
+    }
+
+    boolean isIntact() {
+        return holes == 0;
+    }
+}
+```
+
+Hull 클래스가 스스로 기능을 제공한다. 
+
+일반적으로 이러한 방법으로 상태와 동작을 합칠 수 있다. 클래스의 메소드는 내부 상태를 직접 쉽게 처리할 수 있다. 메소드 매개변수 개수도 줄고 메소드를 이해하기도 더 쉽다.
+
+메소드 내에서 입력 매개변수만 다루고 자신이 속한 클래스의 인스턴스 변수는 다루지 않는 경우를 유심히 살펴보아야 한다. 이것은 상태와 동작이 분리되었다는 의미이고 이러한 메소드로 정보 은닉이 불가능해진다. 더 많은 정보는 버그도 발생하기 쉽다.
+
+하지만 이러한 규칙을 어겨야 하는 프레임워크도 있다. 웹 프레임워크의 컨트롤러는 필드 없이 메소드 매개변수만 있는 등 전형적으로 상태가 존재하지 않는다.
+
+## 7.6 참조 누수 피하기
+
+```java
+class Inventory {
+
+    private final List<Supply> supplies;
+
+    Inventory(List<Supply> supplies) {
+        this.supplies = supplies;
+    }
+
+    List<Supply> getSupplies() {
+        return supplies;
+    }
+}
+```
+
+명백하지 않은(non-trivial) 객체에는 외부에서 접근할 수 있는 내부 상태가 거의 항상 있다. 이러한 상태를 어떤 방식으로 조작할지 신중히 결정해야 한다.
+
+위 `Inventory`는 자료 구조를 포함하는 매우 일반적인 클래스이다. 자료 구조는 외부에서 먼저 초기화된 후 `Inventory`의 생성자에 삽입된다. 하지만 이것은 치명적인 문제를 가지고 있다.
+
+```java
+List<Supply> externalSupplies = new ArrayList<>();
+Inventory inventory = new Inventory(externalSupplies);
+
+inventory.getSupplies().size(); // == 0
+externalSupplies.add(new Supply("Apple"));
+inventory.getSupplies().size(); // == 1
+
+inventory.getSupplies().add(new Supply("Banana"));
+inventory.getSupplies().size(); // == 2
+```
+
+inventory 내부의 제품 리스트를 전혀 보호하지 않고 있다. `externalSupplies` 리스트에 제품을 추가하거나 `getSupplies()`가 반환한 리스트에 변경 연산을 수행하면 재고 상태가 바뀐다. `supplies` 필드에 `final` 키워드를 붙여도 이러한 동작을 막을 수 없다. 또한 `null` 마저 지금 당장 생성자에 전달할 수 있다.
+
+원인은 메모리에 들어 있는 리스트가 `new ArrayList<>()`로 생성한 리스트 하나뿐이기 때문이다. 사실상 `Inventory` 내부 구조로의 참조를 게터를 통해 바깥에 노출하는 셈이다.
+
+```java
+class Inventory {
+
+    private final List<Supply> supplies;
+
+    Inventory(List<Supply> supplies) {
+        this.supplies = new ArrayList<>(supplies); // null이 들어오면 예외 발생!
+    }
+
+    List<Supply> getSupplies() {
+        return Collections.unmodifiableList(supplies);
+    }
+}
+```
+
+위코드는 Inventory의 내부 구조를 훨씬 더 잘 보호한다. 전달한 리스트의 참조가 아니라 리스트 내 Supply 객체로 내부 ArrayList를 채운다. 또힌 null이 들어오면 바로 예외를 발생시킨다.
+
+또한 내부 리스트를 `getSupplies()`로 바로 노출하지 않고 `unmodifiableList()`로 래핑한 후 노출한다. 그렇기 때문에 읽기 접근만 가능하다. 리스트에 원소를 추가하려면 이러한 기능을 하는 명시적인 메소드를 작성해야 한다.
+
+[Collections.unmodifiableList()](https://docs.oracle.com/javase/8/docs/api/java/util/Collections.html#unmodifiableList-java.util.List-)
+
+
+```java
+List<Supply> externalSupplies = new ArrayList<>();
+Inventory inventory = new Inventory(externalSupplies);
+
+inventory.getSupplies().size(); // == 0
+externalSupplies.add(new Supply("Apple"));
+inventory.getSupplies().size(); // == 0
+
+// UnsupportedOperationException
+inventory.getSupplies().add(new Supply("Banana"));
+```
+
+또한 리스트를 수정하려고 하면 `UnsupportedOperationException`이 발생한다.
+
+위와 같은 기법을 `방어 복사(defensive copying)`이라고 부른다. 전달된 자료 구조를 재사용하는 대신 복사본을 만들어 제어한다.
+
+`setter`와 `getter` 둘 다 보호해야 한다는 점을 명시해야 한다.
+
+## 7.7 null 반환하지 않기
+
+```java
+class SpaceNations {
+
+    static List<SpaceNation> nations = Arrays.asList(
+            new SpaceNation("US", "United States"),
+            new SpaceNation("RU", "Russia")
+    );
+
+    static SpaceNation getByCode(String code) {
+        for (SpaceNation nation : nations) {
+            if (nation.getCode().equals(code)) {
+                return nation;
+            }
+        }
+        return null;
+    }
+}
+```
+
+메소드 호출 시 적절히 반환할 값이 없다고 `null`을 반환하면 프로그램의 `안정성(stability)`을 크게 해칠 수 있다.
+
+```java
+String us = SpaceNations.getByCode("US").getName();
+// -> "United States"
+
+String anguilla = SpaceNations.getByCode("AI").getName();
+ // -> NullPointerException
+```
+
+오류가 발생한 소지가 있다. 알려지지 않은 국가 코드를 넣으면 `NullPointerException`이 쉽게 발생한다. 메소드가 `null`을 반환할 가능성이 있기 때문에 매번 명시적으로 반환값을 확인해야 한다.
+
+```java
+class SpaceNations {
+
+    /** Null object. */
+    static final SpaceNation UNKNOWN_NATION = new SpaceNation("", "");
+
+    static List<SpaceNation> nations = Arrays.asList(
+            new SpaceNation("US", "United States"),
+            new SpaceNation("RU", "Russia")
+    );
+
+    static SpaceNation getByCode(String code) {
+        for (SpaceNation nation : nations) {
+            if (nation.getCode().equals(code)) {
+                return nation;
+            }
+        }
+        return UNKNOWN_NATION;
+    }
+}
+```
+
+`IllegalArgumentException`이나 `NoSuchElementException`과 같은 예외를 던지는 방법도 있다. 예외를 통해 문제가 있다고 밝히는 것이다. 이 경우, 호출하는 쪽에서 명시적으로 문제를 처리하도록 해야 한다.
+
+위 예제는 `"널 객체 패턴(null object pattern)"`을 권했다. `null`을 반환하는 대신 `널 객체(null object)`, 즉 객체에 실질적인 값이 없음을 명시적으로 표현한 객체를 반환하는 방식이다.
+
+```java
+String us = SpaceNations.getByCode("US").getName(); // -> "United States"
+String anguilla = SpaceNations.getByCode("AI").getName(); // -> ""
+```
+
+하지만 `UNKNOWN_NATION`이 나올 경우, 어떻게 대응해야 할지는 여전히 호출하는 쪽에 달려있다. 하지만 값을 무시하든 예외를 던지는 선택의 여지가 추가되었다.
+
+널 객체는 빈 문자열, 빈 컬렉션, 또는 예제에서처럼 특수 클래스 인스턴스 등 다양한 형태로 표현된다. 하지만 어떤 형태를 띠든 공통 목표는 `"비용이 막대한 실수"`가 일어나지 않게 하는 것이다. 
+
+### null object에 대한 생각
+
+null object의 존재를 확인하기 위해서는 결국 해당 클래스의 의도를 확인해야 한다. 여러 가지의 선택지를 주는 것은 좋지만 차라리 예외를 던져 확실히 처리하도록 제한하는 편이 더 일관적인 코드를 작성할 수 있지 않을까란 생각이 든다. 추후 null object의 역할을 발견하거나 사용하게 되면 각각의 장단점을 더욱 잘 느낄 수 있을 것 같다는 생각이 든다.

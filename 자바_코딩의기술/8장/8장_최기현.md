@@ -1,0 +1,508 @@
+# chapter 08 데이터 흐름
+
+> 객체 지향 프로그래밍은 동작부를 캡슐화해 코드를 이해하기 쉽게 만든다. 함수형 프로그래밍은 동작부를 최소화해 코드를 이해하기 쉽게 만든다. - 마이클 페더스
+
+## 8.1 익명 클래스 대신 람다 사용하기
+
+```java
+class Calculator {
+
+    Map<Double, Double> values = new HashMap<>();
+
+    Double square(Double x) {
+        Function<Double, Double> squareFunction =
+                new Function<Double, Double>() {
+                    @Override
+                    public Double apply(Double value) {
+                        return value * value;
+                    }
+                };
+        return values.computeIfAbsent(x, squareFunction);
+    }
+}
+```
+
+Java 8에서는 기존 몇 가지 클래스에 더 유용한 메소드를 추가해 향샹 시켰다. 그 중 하나인 `computeIfAbsent()`가 위 코드에 나온다. 이 메소드는 키를 사용해 맵에서 값을 얻는데 맵에 키가 없으면 값을 먼저 계산한다.
+
+하지만 메소드를 사용하려면 맵에 키가 존재하지 않을 때 **어떻게** 값을 계산할 것인지에 대한 로직을 입력 매개변수로 제공해야 한다.
+
+`computeIfAbsent()`에는 `Function<Double, Double>` 인터페이스를 구현하면서 `Double apply(Double value)` 메소드를 포함하는 클래스의 인스턴스가 필요하다.
+
+Double이라는 타입은 values 맵에 들어 있는 타입에 기반하여 정한 것이기 때문에 맵이 다르면 타입또한 달라진다.
+
+위 코드는 인터페이스를 구현할 `익명 클래스(anonymous class)`를 초기화했다. 클래스명이 없고 클래스에 인스턴스가 딱 하나만 존재하고 있기 대문에 익명이라고 부른다.
+
+하지만 익명 클래스는 코드량을 늘릴 뿐이다. 실제 연산은 `return value * value` 한줄이지만 익명 클래스를 구현하기 위한 부가적인 요소들에 의해 가려진다.
+
+이것을 대안하기 위한 `람다 표현식(lambda expression)`이 존재한다.
+
+```java
+class Calculator {
+
+    Map<Double, Double> values = new HashMap<>();
+
+    Double square(Double value) {
+        Function<Double, Double> squareFunction = factor -> factor * factor;
+        return values.computeIfAbsent(value, squareFunction);
+    }
+}
+```
+
+훨씬 짧아지고, 연산 로직이 바로 보이기 때문에 핵심을 파악하기 쉬워졌다. 
+
+람다는 함수형 인터페이스(단일 추상 메소드를 포함하는 인터페이스)를 구현한다. 
+
+1. 람다는 한 줄, 여러 줄로 작성이 가능하다.
+```java
+// one-liner
+Function<Double, Double> squareFunction = factor -> factor * factor;
+//  multi-liner
+Function<Double, Double> squareFunction = factor -> {
+    return factor * factor;
+};
+```
+
+2. 암묵적이거나 명시적인 타입 선언이 가능하다.
+```java
+// without type definition and braces
+Function<Double, Double> squareFunction = factor -> factor * factor;
+//  with type definition and braces
+Function<Double, Double> squareFunction = (Double factor) -> factor * factor;
+```
+
+람다 표현식의 매개변수는 대부분의 경우 컴파일러 스스로 타입을 알아낼 수 있다. 람다 표현식에서 유일하게 구현하고 있는 추상 메소드를 찾아 메소드 서명을 타입 명세로 사용한다. 이것을 타입 추론 (type inference)이라고 부른다.
+
+## 8.2 명령형 방식 대신 함수형
+
+```java
+class Inventory {
+
+    List<Supply> supplies = new ArrayList<>();
+
+    long countDifferentKinds() {
+        List<String> names = new ArrayList<>();
+        for (Supply supply : supplies) {
+            if (supply.isUncontaminated()) {
+                String name = supply.getName();
+                if (!names.contains(name)) {
+                    names.add(name);
+                }
+            }
+        }
+        return names.size();
+    }
+}
+```
+
+컬렉션 처리의 경우 함수형 프로그래밍 방식이 명령형 방식보다 훨씬 읽기 쉽다.
+
+명령형 방식의 경우 일반적으로 코드가 **무엇을** 하는지에 가장 큰 관심이 있지 목표에 **어떻게** 도달하는지에는 별 관심이 없다. 
+
+```java
+class Inventory {
+
+    List<Supply> supplies = new ArrayList<>();
+
+    long countDifferentKinds() {
+        return supplies.stream()
+                       .filter(supply -> supply.isUncontaminated())
+                       .map(supply -> supply.getName())
+                       .distinct()
+                       .count();
+    }
+}
+```
+
+람다 표현식으로 **무엇이** 이루어지길 원하는지만 명시하면 된다.
+
+[Stream (Java Platform SE 8 )](https://docs.oracle.com/javase/8/docs/api/java/util/stream/Stream.html)
+
+## 8.3 람다 대신 메소드 참조
+
+```java
+class Inventory {
+
+    List<Supply> supplies = new ArrayList<>();
+
+    long countDifferentKinds() {
+        return supplies.stream()
+                       .filter(supply -> !supply.isContaminated())
+                       .map(supply -> supply.getName())
+                       .distinct()
+                       .count();
+    }
+}
+```
+
+람다 표현식을 사용하면 코드가 읽기 편해진다. 하지만 스트림 중간부터 실행할 수 없으며 오직 스트림 전체에 대해서만 실행가능하다. 즉 단위 테스트처럼 람다 표현식의 일부만 테스트하기 어렵다.
+
+람다 표현식은 참조가 불가능해 단위 테스트를 사용해 별개로 테스트할 수 없으니 기대대로 동작하는지 검증하기 어렵다.
+
+반면, 메소드 호출에 기반한 코드는 테스트하기 쉽다. Java의 함수형 프로그래밍에는 이것을 처리할 메소드 참조(method reference)라는 메커니즘이 존재한다. 메소드 참조를 사용하면 메소드 호출을 람다 표현식에 바로 끼워 넣을 수 있다. 
+
+```java
+interface Supply {
+
+    String getName();
+
+    boolean isContaminated();
+
+    boolean isUncontaminated();
+}
+
+class Inventory {
+
+    List<Supply> supplies = new ArrayList<>();
+
+    long countDifferentKinds() {
+        return supplies.stream()
+                       .filter(Supply::isUncontaminated)
+                       .map(Supply::getName)
+                       .distinct()
+                       .count();
+    }
+}
+```
+
+일반적인 람다 표현식을 정의하는 대신 미리 정의된 메소드를 스트림 내에서 바로 참조하여 사용한다.
+
+메소드 참조에는 특수한 `ClassName::methodName` 형식의 문법을 써야 한다. 또한 메소드 참조는 `ClassName::new` 형태로 생성자까지 참조할 수 있다. 
+
+## 8.4 부수 효과 피하기
+
+```java
+class Inventory {
+
+    List<Supply> supplies = new ArrayList<>();
+
+    long countDifferentKinds() {
+        List<String> names = new ArrayList<>();
+
+        Consumer<String> addToNames = name -> names.add(name);
+
+        supplies.stream()
+                .filter(Supply::isUncontaminated)
+                .map(Supply::getName)
+                .distinct()
+                .forEach(addToNames);
+        return names.size();
+    }
+}
+```
+
+이론상 함수형 프로그래밍은 side effect는 없다. 모두 입력으로 데이터를 받아 출력으로 새로운 데이터를 생성하는 함수일 뿐이다.
+
+하지만 명령형과 객체 지향 프로그래밍을 항상 side effect에 의존한다. Java에는 현재 3 가지 방식을 모두 섞어서 사용할 수 있다. 이것은 매우 강력하지만 오류 발생을 야기한다.
+
+위 코드는 목표를 이루기 위해 side effect에 크게 의존하고 있다. `Consumer addToNames`는 람다 표현식 박에 있는 리스트에 원소를 추가한다. 바로 이때 side effect가 발생한다.
+
+Java는 여러 스레드 간 side effect가 발생하는 것에 대해 보장하지 않는다. 람다 표현식이 병렬화하기만 해도 ArrayList는 `thread-safe`하지 않기 때문에 잘못된 결과가 나올 수 있다.
+
+```java
+class Inventory {
+
+    List<Supply> supplies = new ArrayList<>();
+
+    long countDifferentKinds() {
+        List<String> names = supplies.stream()
+                                     .filter(Supply::isUncontaminated)
+                                     .map(Supply::getName)
+                                     .distinct()
+                                     .collect(Collectors.toList());
+        return names.size();
+    }
+}
+```
+
+리스트를 직접 만들지 않고 컬렉션 내 스트림에 남아 있는 각 원소를 `collect()`했다. 리스트를 만들려면 `collect(Collectors.toList())`로 스트림을 종료해야 한다.
+
+한달 더 나아가 결과 리스트의 크기까지 `count()`를 활용하여 처리할 수 있다.
+
+```java
+class Inventory2 {
+
+    List<Supply> supplies = new ArrayList<>();
+
+    long countDifferentKinds() {
+        return supplies.stream()
+                       .filter(Supply::isUncontaminated)
+                       .map(Supply::getName)
+                       .distinct()
+                       .count();
+    }
+}
+```
+
+스트림을 종료시킬 때 forEach()는 쉽게 부수 효과를 일으킨다. collect()나 reduce()를 사용하면 스트림을 직접 종료 시킬 수 있을 뿐만 아니라 List나 Set 등 원하는 자료 구조를 생성한다.
+
+## 8.5 복잡한 스트림 종료 시 컬렉트 사용하기
+
+```java
+List<Supply> supplies = new ArrayList<>();
+
+    Map<String, Long> countDifferentKinds() {
+        Map<String, Long> nameToCount = new HashMap<>();
+
+        Consumer<String> addToNames = name -> {
+            if (!nameToCount.containsKey(name)) {
+                nameToCount.put(name, 0L);
+            }
+            nameToCount.put(name, nameToCount.get(name) + 1);
+        };
+
+        supplies.stream()
+                .filter(Supply::isUncontaminated)
+                .map(Supply::getName)
+                .forEach(addToNames);
+        return nameToCount;
+    }
+```
+
+위 코드도 동일하다. `Map<String, Long>` `nameToCount`를 계산할 때 `side effect`에 크게 의존한다. 또한 기존 구현보다 더 복잡해졌다.
+
+```java
+class Inventory {
+
+    List<Supply> supplies = new ArrayList<>();
+
+    Map<String, Long> countDifferentKinds() {
+        return supplies.stream()
+                       .filter(Supply::isUncontaminated)
+                       .collect(Collectors.groupingBy(Supply::getName,
+                               Collectors.counting())
+                       );
+    }
+}
+```
+
+스트림의 결과를 Collection으로 만들어야 할 경우에 대비해 Java는 `collect()` 연산자를 비롯해 바로 사용할 수 있는, 미리 정의된 여러 `Collectors`를 제공한다.
+
+collect()를 사용하는 방법이 훨씬 더 간결하고 요점도 잘 전달된다. 마지 잘 묘사된 SQL쿼리처럼 읽힌다.
+
+## 8.6 스트림 내 예외 피하기
+
+```java
+class LogBooks {
+
+    static List<LogBook> getAll() throws IOException {
+        return Files.walk(Paths.get("/var/log"))
+                    .filter(Files::isRegularFile)
+                    .filter(LogBook::isLogbook)
+                    .map(path -> {
+                        try {
+                            return new LogBook(path);
+                        } catch (IOException e) {
+                            throw new UncheckedIOException(e);
+                        }
+                    })
+                    .collect(Collectors.toList());
+    }
+}
+```
+
+우리는 항상 문제 발생에 대비해야 한다. 하지만 람다 표현식은 쉽지 않다. 
+
+스트림에 `검증된 예외(checked exception)`를 쓸 수 없다. 반드시 스트림 내에서 예외를 처리해야 한다. 그렇기 때문에 `IOException`을 잡은 후 `RuntimeException`으로 확장되는 `UncheckedIOException`으로 변환한 것이다.
+
+Java의 함수형 방식에는 예외, 심지어 `검증되지 않은 예외(unchecked exception)`까지 처리할 적절한 메커니즘이 전혀 없다. 근본적으로 패러다임의 부조화 때문이다. 함수는 입력을 처리하고 출력을 생성할 뿐이다. 함수는 예외를 던지거나 잡지 않는다.
+
+```java
+class LogBooks {
+
+    static List<LogBook> getAll() throws IOException {
+        try (Stream<Path> stream = Files.walk(Paths.get("/var/log"))) {
+            return stream.filter(Files::isRegularFile)
+                         .filter(LogBook::isLogbook)
+                         .flatMap(path -> {
+                             try {
+                                 return Stream.of(new LogBook(path));
+                             } catch (IOException e) {
+                                 return Stream.empty();
+                             }
+                         })
+                         .collect(Collectors.toList());
+        }
+    }
+}
+```
+
+위 코드는 개선한 코드이다. 더이상 검증된 예외를 검증되지 않은 예외로 더 이상 변환하지 않는다. 그 대신 스트림에서 예외 원소를 간단히 제거한다.
+
+위 방식은 함수형 방식 패러다임에 더 잘 부합한다. 어떤 일이 발생하든 예외는 전체 연산을 중지시키지 않으면 스트림은 입력에 따른 출력을 생성한다. 간단히 말해 예외를 피하려면 함수형 방식을 따르는 편이 낫다.
+
+### Checked Exception vs Unchecked Exception
+
+| |Checked Exception|Unchecked Exception|
+|---|---|---|
+|처리에 대한 여부|반드시 예외를 처리해야 한다.|	명시적인 처리를 강제하지 않는다.|
+|확인되는 시점|컴파일 단계에서 확인 가능하다|실행 단계에서 확인 가능하다.|
+|대표적인 예외|Exception을 상속 받는 하위 클래스 중 Runtime Exception을 제외한 모든 예외는 Checked Exception으로 분류 된다. `IOException`, `SQLException`|Runtime Exception의 하위 클래스 `NullPointerException`, `IllegalArgumentException`, `SystemException`|
+
+## 8.7 널 대신 옵셔널
+
+```java
+class Communicator {
+
+    Connection connectionToEarth;
+
+    void establishConnection() {
+        // connectionToEarth를 할당하는 데 쓰이지만 불안정할 수 있음
+    }
+
+    Connection getConnectionToEarth() {
+        return connectionToEarth;
+    }
+}
+```
+
+위 코드에 나오는 `Connection`은 끊겨 있을 수도 있고 `connectionToEarth`가 `null`일 수도 있다. 호출하는 코드에서 `null`을 검증하지 않으면 문제가 발생할 여지가 있다.
+
+```java
+communicator.getConnectionToEarth().send("Houston, we got a problem!");
+```
+
+```java
+class Communicator {
+
+    Connection connectionToEarth;
+
+    void establishConnection() {
+        // connectionToEarth를 할당하는 데 쓰이지만 불안정할 수 있음
+    }
+
+    Optional<Connection> getConnectionToEarth() {
+        return Optional.ofNullable(connectionToEarth);
+    }
+}
+```
+
+`Optional`은 있을 수도 있고 없을 수도 있는 객체를 위한 임시 저장소이다. 객체나 `null`을 가리킬지도 모를 참조를 넣어 `Optional.ofNullable()`을 호출해 생성한다. 예제에서 `connectionToEarth`는 있을 수도 있고 없을 수도 있다.
+
+```java
+Communicator communicator = new Communicator();
+
+Connection connection = communicator.getConnectionToEarth().orElse(null);
+connection.send("Houston, we got a problem!");
+```
+
+```java
+Communicator communicationSystem = new Communicator();
+
+communicationSystem.getConnectionToEarth()
+            .ifPresent(connection -> 
+                connection.send("Houston, we got a problem!")
+            );
+```
+
+Connection의 널 객체도 이렇게 해결할 수 있다. 하지만 예제에서는 일반적인 널 객체인 `Optional.empty()`를 사용했다. 이로써 개발 수고는 줄지만 매번 널 객체를 명시적으로 처리해야 하는 비용이 발생한다. 람다를 비롯해 `Optional` 클래스도 대부분 바람직한 선택이다.
+
+## 8.8 선택 필드나 매개변수 피하기
+
+```java
+class Communicator {
+
+    Optional<Connection> connectionToEarth;
+    
+    void setConnectionToEarth(Optional<Connection> connectionToEarth) {
+        this.connectionToEarth = connectionToEarth;
+    }
+    Optional<Connection> getConnectionToEarth() {
+        return connectionToEarth;
+    }
+}
+```
+
+위 코드를 보면 setter와 getter에 Optional 필드가 나온다. 바로 이것이 문제이다.
+
+Optional은 `부재(absent)(Optional.empty())` 또는 `존재(present)`라는 두 가지 상태가 있다. 하지만 Optional 필드나 메소드가 매개변수라면 변수가 null일 수도 있다. 상태가 3개로 늘어난다. 존재, 부재, null
+
+```java
+class Communicator {
+
+    Connection connectionToEarth;
+
+    void setConnectionToEarth(Connection connectionToEarth) {
+        this.connectionToEarth = Objects.requireNonNull(connectionToEarth);
+    }
+
+    Optional<Connection> getConnectionToEarth() {
+        return Optional.ofNullable(connectionToEarth);
+    }
+
+    void reset() {
+        connectionToEarth = null;
+    }
+}
+```
+
+필드와 메소드 매개변수 타입에서 `Optional` 부분을 제거해야 한다. `Optional` 타입은 반환값에만 써야 한다. 그래야만 `Optional.empty()`와 null 값 간 의미상 혼란을 막을 수 있다.
+
+위 코드는 getter, setter의 타입이 서로 다르니 `Java Beans` 규칙에 더 이상 부합하지 않는다. 이러한 규칙을 따르는 프레임워크와 코드를 통합해야 한다면 문제가 생길 여지가 있다. 이런 경우 Optional 반환 타입 없이 돌아가도록 만들어야 한다. 그렇지 않다면 null 값을 피함으로써 Optional로 프로그램을 더 강력하게 만들 수 있다.
+
+### Java Beans
+
+Java Beans란 Java로 작성된 소프트웨어를 일컫는 말로 데이터 표현을 목적으로 하는 Java 클래스이다. Java Beans는 'Java Beans Convention'을 지켜야 한다.
+
+#### Java Beans Convention
+* 클래스는 인자가 없는 기본 생성자를 갖는다.
+* 클래스의 멤버 변수는 프로퍼티라고 하며 private 접근 제한자를 가져야 한다.
+* 클래스의 프로퍼티들은 Getter/Setter를 통해 접근할 수 있어야 한다.
+    * Getter/Setter의 접근 제한자는 public이어야 한다.
+    * 프로퍼티의 타입이 Boolean인 경우 is로 시작할 수 있다.
+    * Getter의 경우 파라미터가 존재하지 않아야 하며, setter의 경우 하나 이상의 파라미터가 존재한다.
+    * Read Only인 경우 Setter는 없을 수 있다.
+    * Serializable 인터페이스를 구현한다.
+* Java Beans 클래스는 패키징 되어야 한다.
+
+## 8.9 옵셔널을 스트림으로 사용하기
+
+```java
+class BackupJob {
+
+    Communicator communicator;
+    Storage storage;
+
+    void backupToEarth() {
+        Optional<Connection> connectionOptional =
+                communicator.getConnectionToEarth();
+        if (!connectionOptional.isPresent()) {
+            throw new IllegalStateException();
+        }
+
+        Connection connection = connectionOptional.get();
+        if (!connection.isFree()) {
+            throw new IllegalStateException();
+        }
+
+        connection.send(storage.getBackup());
+    }
+}
+```
+
+Optional은 0개 또는 1개 원소만 포함하는 특별한 형식의 `스트림`이다.
+
+Optional을 이상한 이름의 변수에 저장한 이유는 `impedance mismatch` 때문이다.
+
+```java
+class BackupJob {
+
+    Communicator communicator;
+    Storage storage;
+
+    void backupToEarth() {
+        Connection connection = communicator.getConnectionToEarth()
+                .filter(Connection::isFree)
+                .orElseThrow(IllegalStateException::new);
+        connection.send(storage.getBackup());
+    }
+}
+```
+
+Optional 클래스에 들어 있는 다양한 메소드를 적극 활용하면 된다.
+
+```java
+String state = communicator.getConnectionToEarth()
+                        .map(Connection::isFree)
+                        .map(isFree -> is Free ? "free" : "busy")
+                        .orElse("absent");
+```

@@ -1,0 +1,214 @@
+# chapter 09 실전 준비
+
+> 코드의 첫 90%에 개발의 첫 90%가 쓰인다. 코드의 나머지 10%에 개발 시간의 마지막 90%가 쓰인다. - 톰 카길(Tom Cargill))
+
+## 9.1 정적 코드 분석 도구
+
+`정적 분석 도구(static analysis tool)`는 코드 품질을 가늠하는 일종의 바이다. 코드를 분석하고 잠재적인 버그나 코드 스멜을 찾는다.
+
+SpotBugs나 그 이전 모델인 FindBugs는 Java에서 오래된 정적 분석 도구이다. 400가지 이상의 잠재적 버그를 잡아낸다.
+
+Checkstyle과 PMD도 유명한 도구이다. 다만 다양하게 설정할 수 있다는 점에서 많이 다른데 이것은 특정 코드 방식을 고집할 때 매우 유용하다.
+
+Error Prone은 Java 컴파일러를 개선했을 뿐만 아니라 더 고급 타입 검증을 수행하며 더 많은 이슈에 대한 수정본을 제한한다.
+
+최근에는 정적 분석 지원이 내장된 Java IDE도 등장했다. 인텔리제이에 `Code Inspection`이라는 기능이다.
+
+## 9.2 팀 내 자바 포맷 통일
+
+계속된 재서식화나 버그를 피하려면 팀원 전원이 하나의 일관된 서식화 방식에 동의해야 한다.
+
+더 좋은 방법은 모든 논쟁을 중단하고 업계 표준을 사용하는 것이다. 구글 Java 스타일 가이드를 사용하길 권장한다.
+
+[구글 Java 스타일 가이드](https://google.github.io/styleguide/javaguide.html)
+
+## 9.3 빌드 자동화
+
+모든 시스템에서 같은 방식으로 동작하면서 개발자 장비와 독립적인 정교한 빌드 도구나 언어로 빌드를 자동화하는 것이다. 바로 gradle, maven, ant와 같은 도구들이다.
+
+빌드를 자동화하려면 빌드 파일을 작성해 프로젝트에 넣어야 한다. 빌드 파일은 빌드 도구별로 특수한 문법을 사용하고 파일 내에 소스 코드가 어디에 있는지, 종속성과 외부 라이브러리는 무엇인지, 성공적으로 빌드하려면 그 밖에 무엇을 해야 하는지 설명한다. 또한 빌드 도구는 파일을 해석하고 필요한 외부 라이브러리를 다운로드하고 모든 테스트를 실행하고 테스트에 성공하면 실행 파일을 빌드한다.
+
+## 9.4 지속적 통합
+
+광범위한 테스트와 통합, 코드 품질 검증 등 모든 과정을 지속적 통합서버라는 전용 장비에 위탁할 수 있다. 버전 제어 시스템에 커밋할 때마다 전용 서버가 코드를 모두 가져와 전체 테스트를 실행하고 완벽히 통합된 실행 파일을 빌드한다. 코드 품질 검증을 수행하고 결과를 이전 커밋의 데이터와 비교함으로써 코드 품질에 대한 타임라인을 생성한다.
+
+사용자 서버에는 Java 분야에서 가장 유명한 젠킨스를 설치할 수 있다. 젠킨스는 테스트를 실행하고 품질 검증을 위한 플러그인도 상당수 포함한다.
+
+전용 품질 분석 서버를 사용할 수도 있다. 소나큐브로 직접 호스팅하거나 제품 내 클라우드 솔루션을 사용할 수 있다. Travis-CI나 Codacy처럼 테스트와 품질 분석에 사용할 만한 클라우드 서비스도 다양한다.
+
+[github actions](https://github.com/features/actions)
+
+## 9.5 생산 준비와 납품
+
+로그, 수치, 대시보드, 알람 형태로 감시를 구현한다. `오픈 소스 엘라스틱 스택`과 `그레이로그`가 이러한 작업에 걸맞는다.
+
+만약 데스크탑이나 모바일, SPA을 개발 중이라면 백엔드는 `에어브레이크`를 프론트엔드에는 `센트리`를 추천한다.
+
+하지만 생산에 대비해도 문제는 발생한다. 코드 한 줄 변경을 생산에 반영하는데 오랜 시간이 걸리게 된다. 이때 지속적 통합이 큰 도움이 된다.
+
+## 9.6 콘솔 출력 대신 로깅
+
+```java
+class LaunchChecklist {
+
+    List<String> checks = Arrays.asList("Cabin Pressure",
+                                        "Communication",
+                                        "Engine");
+
+    Status prepareAscend(Commander commander) {
+        System.out.println("Prepare ascend");
+        for (String check : checks) {
+            if (commander.isFailing(check)) {
+                System.out.println(check + " ... FAILURE");
+                System.err.println("Abort take off");
+                return Status.ABORT_TAKE_OFF;
+            }
+            System.out.println(check + " ... OK");
+        }
+        System.out.println("Read for take off");
+        return Status.READY_FOR_TAKE_OFF;
+    }
+}
+```
+
+위 코드는 `System.out.println()`과 `System.err.println()`을 호출하여 프로그램의 상태를 관찰한다. 하지만 많은 정보가 누락되어 있다.
+
+* 명령문이 언제 출력되는지
+* 출력하는 코드 행 수
+* 메소드 매개변수의 값
+* 출력된 명령문의 중요도가 모두 같은지
+
+또한 명령문이 모두 콘솔로 이동하기 때문에 파일로 가공하거나 일부 사람들에게 주요 정보를 전송할 수 없다.
+
+```java
+class LaunchChecklist {
+
+    private static final Logger LOGGER =
+            LogManager.getLogger(LaunchChecklist.class);
+
+    List<String> checks = Arrays.asList("Cabin Pressure",
+                                        "Communication",
+                                        "Engine");
+
+    Status prepareAscend(Commander commander) {
+        LOGGER.info("{}: Prepare ascend", commander);
+        LOGGER.debug("{} Checks: {}", checks.size(), checks);
+        for (String check : checks) {
+            if (commander.isFailing(check)) {
+                LOGGER.warn("{}: {} ... FAILURE", commander, check);
+                LOGGER.error("{}: Abort take off!", commander);
+                return Status.ABORT_TAKE_OFF;
+            }
+            LOGGER.info("{}: {} ... OK", commander, check);
+        }
+        LOGGER.info("{}: Read for take off!", commander);
+        return Status.READY_FOR_TAKE_OFF;
+    }
+}
+```
+
+Log4j가 가장 널리 쓰이는 프레임워크 중 하나이다. Log4j를 활용하면 전체 프로그램을 아우르는 설정에 기반하여 클래스에 특화된 메시지를 작성하는 내부 Logger를 사용할 수 있다.
+
+## 9.7 다중 스레드 코드 최소화 및 독립
+
+오늘날의 장비는 다중 코어 기능을 활용하여 동시 실행(concurrency)한다. 
+
+동시 실행은 이해하기 어렵고 올바르게 코딩하기는 더욱 힘들다. 또한 정확성을 확인하는 정적 분석도 쉽게 적용할 수 없다.
+
+우선 성능 벤치마크에서 심각한 결과가 나오는 등 적절한 근거가 생기기 전에는 때이른 최적화와 다중 스레드 코딩은 지양한다. 코드를 측정 후 너무 느릴 때만 다중 스레드를 활용한다.
+
+만약 동시 실행 코드를 작성해야 한다면 프로그램을 구조화하는데 집중해야 한다.
+
+또한 가변 상태보다 불변 상태를 사용해야 한다. 가변 데이터는 경합 조건(race condition)이나 갱신 무효(lost update)와 같은 동시 실행 버그를 일으키기 쉽다. 가변 데이터가 적을수록 이러한 버그가 발생할 가능성도 줄어든다.
+
+## 9.8 고급 동시 실행 추상화 사용하기
+
+다중 스레드를 사용하는 경우 전형적으로 공유 메모리를 통해 스레드 간 커뮤니케이션을 수행한다. Java는 내장 스레드 모델과 동기화 프리미티브를 지원한다.
+
+동기화 프리미티브는 volatile과 synchronized와 같은 키워드로 코드 내 임계 염역(critial section)을 표시할 때 사용한다. 또한 Thread 클래스의 start()와 join() 메소드로 스레드를 처리할 수 있고 Object에 wait()와 notify()를 사용해 스레드를 잠들게 하거나 깨울 수 이다. 하지만 잘못 사용하기 쉽다.
+
+하지만 Java의 동시 실행 프리미티브는 과거에 머물러 있다. 예를들면 AtomicInteger, ConcurrentHashMap 등이 있다.
+
+이러한 클래스를 올바르게 사용하려면 Java 메모리 모델과 모델 내 상태 변경 간 전후 관계가 어떻게 동작하는지 완벽히 이해해야 한다.
+
+## 9.9 프로그램 속도 향상
+```java
+class Inventory {
+
+    List<Supply> supplies;
+
+    long countDifferentKinds() {
+        return supplies.stream()
+                       .sequential() // this can be omitted
+                       .filter(Supply::isUncontaminated)
+                       .map(Supply::getName)
+                       .distinct()
+                       .count();
+    }
+}
+```
+
+위 코드는 스트림이 원소를 순차적으로 처리한다. 한 번에 하나씩 연산한다. 만약 리스트의 원소가 수백만 개로 이루어져 있다면 많은 시간이 소요될 것이다. 하나의 코어가 모든 연산을 진행하기 때문이다.
+
+```java
+class Inventory {
+
+    List<Supply> supplies;
+
+    long countDifferentKinds() {
+        return supplies.stream()
+                       .parallel()
+                       .filter(Supply::isUncontaminated)
+                       .map(Supply::getName)
+                       .distinct()
+                       .count();
+    }
+}
+```
+
+스트림은 손쉽게 병렬 처리로 변환할 수 있다. 만약 시스템 내 사용 가능한 코어가 n개라고 가정하면 때때로 n배 빠르게 성능이 향상할 수 있다. JVM은 내부적으로 모든 병렬 스트림 간 공유되는 스레드 풀을 제공한다.
+
+하지만 위 방식은 side effect가 발생하지 않는 스트림일 때, 매 처리 단계가 서로 독립적일 때만 정상 동작한다. sort(), forEachOrdered()는 스트림을 다시 동기화 시키기 때문에 오버헤드가 무척 크게 발생한다.
+
+스트림의 일부만 병렬화하는 것은 불가능하다. 스트림 내에서 sequential()이나 parallel()을 여러 번 호출하면 마지막 호출만 유효하다.
+
+## 9.10 틀린 가정 알기
+
+```java
+class NameTag {
+
+    final String name;
+
+    NameTag(String fullName) {
+        this.name = parse(fullName).toUpperCase();
+    }
+
+    String parse(String fullName) {
+        String[] components = fullName.split("[,| ]");
+        if (components == null || components.length < 2) {
+            return fullName;
+        }
+        if (fullName.contains(",")) {
+            return components[0];
+        } else {
+            return components[components.length - 1];
+        }
+    }
+}
+```
+
+어떤 도메인에서 작업하든 코드는 실제 세계를 이해한 만큼만 좋아질 뿐 더 이상 나아지지 않는다. 그렇기 때문에 함부로 너무 많이 가정하면 안되고 틀렸다고 증명될 상황에 대처하려고 코드를 유연하게 만들어도 안된다.
+
+```java
+class NameTag {
+
+    final String name;
+
+    NameTag(String name) {
+        Objects.requireNonNull(name);
+        this.name = name;
+    }
+}
+```
+
+코드에서 너무 많이 가정하지 말고 그 작업을 그냥 클래스의 사용자에게 넘기자. 형식에 대해 상세히 알지 못하면 최소한으로 가정하는 것이 최선이다.

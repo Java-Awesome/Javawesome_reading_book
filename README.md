@@ -114,3 +114,13 @@ issue를 정리해서 close 한다.
 9. [9장](https://github.com/Java-Awesome/Javawesome_reading_book/tree/main/%EC%9E%90%EB%B0%94_%EC%BD%94%EB%94%A9%EC%9D%98%EA%B8%B0%EC%88%A0/9%EC%9E%A5) - 2021.09.17
 
    > 사이먼 하러 외 2명, 『자바 코딩의 기술』, 길벗(2020), p233-254.
+
+
+
+
+
+## 3. [Morden Java In Action (라울-게이브리얼 우르마 외 2명, 한빛 미디어)](https://www.hanbit.co.kr/store/books/look.php?p_code=B4926602499)
+
+1. [1장](https://github.com/Java-Awesome/Javawesome_reading_book/tree/main/%EB%AA%A8%EB%8D%98_%EC%9E%90%EB%B0%94_%EC%9D%B8_%EC%95%A1%EC%85%98/1%EC%9E%A5) - 2021.10.01
+
+   > 라울-게이브리얼 우르마, 마리오 푸스코, 앨런 마이크로프트, 『Modern Java in Action』, 한빛미디어(2019), p37-65.

@@ -124,3 +124,7 @@ issue를 정리해서 close 한다.
 1. [1장](https://github.com/Java-Awesome/Javawesome_reading_book/tree/main/%EB%AA%A8%EB%8D%98_%EC%9E%90%EB%B0%94_%EC%9D%B8_%EC%95%A1%EC%85%98/1%EC%9E%A5) - 2021.10.01
 
    > 라울-게이브리얼 우르마, 마리오 푸스코, 앨런 마이크로프트, 『Modern Java in Action』, 한빛미디어(2019), p37-65.
+
+2. [2장](https://github.com/Java-Awesome/Javawesome_reading_book/tree/main/%EB%AA%A8%EB%8D%98_%EC%9E%90%EB%B0%94_%EC%9D%B8_%EC%95%A1%EC%85%98/1%EC%9E%A5) - 2021.11.05
+
+   > 라울-게이브리얼 우르마, 마리오 푸스코, 앨런 마이크로프트, 『Modern Java in Action』, 한빛미디어(2019), p67-86.
